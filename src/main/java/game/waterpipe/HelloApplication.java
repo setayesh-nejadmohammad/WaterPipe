@@ -21,13 +21,15 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.IOException;
+import java.util.Random;
 
 public class HelloApplication extends Application {
     private int SIZE = 5; // 5x5 grid --> This will change if user pick LEVEVL 2
     private static final int CELL_SIZE = 70; // Size of each square cell
     private static final int SCENE_SIZE = 700; // 700x700 scene
     private int[][] rotations = new int[100][100]; // Track rotation states (0-3)
-    private int moves = 10;
+    private int moves = 5;
+    private Label moveLabel;
     Image icon = new Image(getClass().getResourceAsStream("pics/water-pipe.png"));
 
     //private Stage stage;
@@ -45,14 +47,19 @@ public class HelloApplication extends Application {
         ImageView level1view = new ImageView(level1);
         Image level2 = new Image(getClass().getResourceAsStream("pics/level2.png"));
         ImageView level2view = new ImageView(level2);
+        Image level3 = new Image(getClass().getResourceAsStream("pics/level3.png"));
+        ImageView level3view = new ImageView(level3);
 
         Button button1 = new Button();
         Button button2 = new Button();
+        Button button3 = new Button();
         button1.setGraphic(level1view);
         button2.setGraphic(level2view);
+        button3.setGraphic(level3view);
 
         button1.getStyleClass().add("button");
         button2.getStyleClass().add("button");
+        button3.getStyleClass().add("button");
 
         button1.setOnAction(e -> {
             startGame(1);
@@ -62,10 +69,14 @@ public class HelloApplication extends Application {
             startGame(2);
             stageSelector.close();
         });
+        button3.setOnAction(e -> {
+            startGame(3);
+            stageSelector.close();
+        });
 
         HBox buttonsLayout = new HBox(10);
         buttonsLayout.setAlignment(Pos.CENTER);
-        buttonsLayout.getChildren().addAll(button1, button2);
+        buttonsLayout.getChildren().addAll(button1, button2, button3);
 
         VBox layout = new VBox(20);
         layout.setPadding(new Insets(20));
@@ -96,9 +107,10 @@ public class HelloApplication extends Application {
         double centerY = (SCENE_SIZE - (CELL_SIZE * SIZE)) / 2;
 
         final int[] moveArr = {moves};
-        Label moveNum = new Label("Moves : " + moveArr[0]+ "");
-        moveNum.setLayoutX(270);
-        moveNum.setLayoutY(50);
+        Label moveChange = new Label("Moves : " + moveArr[0]+ "");
+        final Label[] moveLabelArr = {moveChange};
+        moveLabelArr[0].setLayoutX(270);
+        moveLabelArr[0].setLayoutY(50);
 
         //FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("hello-view.fxml"));
         //Scene scene = new Scene(fxmlLoader.load(), 320, 240);
@@ -161,8 +173,17 @@ public class HelloApplication extends Application {
                 {0, 4, 2, 1, 2, 1, 8}
         };
 
-        int[][] pipes = (level == 1) ? pipes1 : pipes2;
+        int[][] fixedPipe2 = {
+                {7, 0, 0, 0, 0, 0, 0},
+                {1, 0, 0, 0, 0, 0, 0},
+                {1, 0, 0, 0, 0, 0, 0},
+                {3, 2, 2, 2, 5, 0, 0},
+                {0, 4, 2, 2, 6, 0, 0},
+                {0, 1, 0, 0, 0, 0, 0},
+                {0, 4, 2, 2, 2, 2, 8}
+        };
 
+        int[][] pipes = (level == 1) ? pipes1 : pipes2;
         /*if(level == 1){
             for (int row = 0; row < SIZE; row++) {
                 for (int col = 0; col < SIZE; col++) {
@@ -180,8 +201,6 @@ public class HelloApplication extends Application {
         startButton.setLayoutY(20);
 
         startButton.setOnAction(e -> {
-            moveArr[0] -= 1;
-            System.out.println("moves = " + moveArr[0]);
             boolean result = gameCheck.stupidCheck(SIZE);
             Stage gameResult = new Stage();
             Label label;
@@ -231,11 +250,20 @@ public class HelloApplication extends Application {
         }
 
         // Create grid with animated pipes
-        for (int row = 0; row < SIZE; row++) {
-            for (int col = 0; col < SIZE; col++) {
+        for (int row = 0; row < SIZE; row++){
+            for (int col = 0; col < SIZE; col++){
                 ImageView pipeView;
                 boolean flag = false;
-
+                Random random = new Random();
+                if(pipes[row][col] == 1 || pipes[row][col] == 2){
+                    pipes[row][col] = random.nextInt(2) + 1;
+                }
+                else if(pipes[row][col] >= 3 && pipes[row][col] <= 6){
+                    pipes[row][col] = random.nextInt(4) + 3;
+                }
+                else if(pipes[row][col] == 0){
+                    pipes[row][col] = random.nextInt(7);
+                }
                 if(level == 2 && ((row == 3 && col == 2) || row == 5 && col == 1)){
                     pipeView = new ImageView(staticPipes[pipes[row][col]]);
                     flag = true;
@@ -263,7 +291,15 @@ public class HelloApplication extends Application {
                 final int c = col;
 
                 pipeView.setOnMouseClicked(event -> {
-                    if(level == 2) moves -= 1;
+                    if(level == 2) moveArr[0] -= 1;
+                    moveLabelArr[0].setText("Moves : " + (moveArr[0]));
+                    if(moveArr[0] == -1){
+                        limits noMoves = new limits();
+                        noMoves.outOfMoves();
+                        stage.close();
+                    }
+                    System.out.println("moves: "+moveArr[0]);
+
                     // Disable during animation to prevent spam clicks
                     pipeView.setDisable(true);
 
@@ -328,7 +364,8 @@ public class HelloApplication extends Application {
 
         Pane root = new Pane(grid);
         if(level == 2){
-            root.getChildren().add(moveNum);
+            //System.out.println("hrhehehhe: "+ moveArr[0]);
+            root.getChildren().add(moveLabelArr[0]);
         }
         root.getChildren().add(startButton);
         root.setStyle("-fx-background-color: lightblue;");
